@@ -1,30 +1,52 @@
 ---
 title: "Social 2022 H1"
 author: "Darshan Patel"
-date: "8/4/2022"
-output: html_notebook
+date: "`r Sys.Date()`"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+    number_sections: no
+    theme: cerulean
+    highlight: zenburn
+    fig_caption: yes
+    df_print: paged
 ---
 
-```{r setup, include=FALSE}
+# BigQuery and R Studio Live Training
+
+## Big Query
+
+-   All projects for Advanced Analytics will be found in this schema: <https://console.cloud.google.com/welcome?project=essence-analytics-dwh>
+
+    -   Clicking (Start New Query) on this link should take you to the explorer where you can search for `essence-analytics-dwh` and make sure you pin the project to your list of projects
+![Finding Project](Images/BQ1.PNG)
+    -   Pinned Projects will show up under explorer and you should be able to view the various schema and tables associated with that project. There you can run and queries in editor. Save the views in BQ associated with that Query. Share query with other people and set a destination table for query if creating a permanent table. Be mindful of the amount of MBs the query will process! Very large queries can cost money.       
+![Finding Project](Images/BQ2.PNG)  
+    -   For our purposes we generally export the data provided by big query into a Domino Jupyter Notebook (not shown) or local R Studio Session.  
+![Finding Project](Images/BQ3.PNG)  
+
+#### Exercise 1
+-   Try finding the table in the explorer in essence-analytics-dwh associated with the query:  
+`SELECT * FROM` \``essence-analytics-dwh.TrueNorth_Benchmarks.social_data_2022H2`\` `where month_year >= '2022-01-01'`
+
+
+```{r setup, include=TRUE}
+#note: normally include = FALSE for this
 knitr::opts_chunk$set(echo = TRUE)
+options(knitr.table.format = "html") 
+options(digits=5)
+options(scipen = 100)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+#install.packages("pacman")
+library(pacman) #for quick load/install of packages
+p_load(
+  dplyr, readr, tidyverse,forcats,purrr, # reading in data
+  janitor, sqldf,googlesheets4, # additional tools for dealing with data
+  skimr,
+  rqdatatable, #
+  splitstackshape,stringr, #string related libraries
+  kableExtra, ggplot2, plotly,echarts4r,ggpubr,scales,RColorBrewer,ggthemes, #for visualization of data
+  reticulate #for using python
+)
 ```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
