@@ -23,13 +23,34 @@ output:
 ![Finding Project](Images/BQ1.PNG)
     -   Pinned Projects will show up under explorer and you should be able to view the various schema and tables associated with that project. There you can run and queries in editor. Save the views in BQ associated with that Query. Share query with other people and set a destination table for query if creating a permanent table. Be mindful of the amount of MBs the query will process! Very large queries can cost money.       
 ![Finding Project](Images/BQ2.PNG)  
-    -   For our purposes we generally export the data provided by big query into a Domino Jupyter Notebook (not shown) or local R Studio Session.  
+    -   For our purposes we generally export the data provided by big query into a Domino Jupyter Notebook (not shown) or local R Studio Session with a BQ connection.    
 ![Finding Project](Images/BQ3.PNG)  
 
 #### Exercise 1
 -   Try finding the table in the explorer in essence-analytics-dwh associated with the query:  
-`SELECT * FROM` \``essence-analytics-dwh.TrueNorth_Benchmarks.social_data_2022H2`\` `where month_year >= '2022-01-01'`
+`SELECT * FROM` \``essence-analytics-dwh.TrueNorth_Benchmarks.social_data_2022H2`\` `where month_year >= '2022-01-01'`  
 
+-   The data associated with this table can be found in two locations 
+    - [Google Sheets](https://docs.google.com/spreadsheets/d/1OT7zoqbcnadQsR8ehHbvMfKn8mieWYa-dVaCOHFdhHI/edit#gid=12056137)  
+    - [Github CSV](https://github.com/dpatel-Essence/Brand_Report-AdHoc-Requests/blob/main/Social%20Query%202022%20Results%20Updated%20-%20Social%20Results%202022.csv)
+
+***  
+
+## Google Sheets  
+
+-   Some features that are used a decent amount include sharing a doc, making a copy of things you only have read access to (such as templates), downloading to CSV/Excel/JSON, version control.
+![Finding Project](Images/GS1.PNG)  
+-   Other features in the data tab that are often used are creating filters, projecting parts of a sheet, data cleanup, text to columns, and connecting a Gsheet back to BigQuery.
+![Finding Project](Images/GS2.PNG)    
+-   Lastly, adding comments or insering links to a cell  
+![Finding Project](Images/GS3.PNG)  
+
+***  
+## RStudio
+
+### Projects instead of using Working Directory!
+
+-   In 2022, many practitioners of R prefer the use of projects instead of setting a working directory
 
 ```{r setup, include=TRUE}
 #note: normally include = FALSE for this
