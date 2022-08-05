@@ -159,7 +159,7 @@ Note this is much slower than importing from a CSV but useful when working with 
 
 You can specify range, sheet, and other options. [CheatSheet Here](https://github.com/rstudio/cheatsheets/blob/main/data-import.pdf)
 
-```{r data import Gsheet}
+```{r data import Gsheet, results='hide'}
 Social_2022_raw_data = googlesheets4::read_sheet(
   "https://docs.google.com/spreadsheets/d/1OT7zoqbcnadQsR8ehHbvMfKn8mieWYa-dVaCOHFdhHI/edit#gid=12056137"
   , sheet = 'Social Results 2022' , range = 'A1:K98329')
@@ -213,7 +213,7 @@ skim creates a data frame object which can be used to more easily narrow down pr
 
 ------------------------------------------------------------------------
 
-What are 2 issues that you can find based on the following output
+### Exercise 3 - What are 2 issues that you can find based on the following output
 
 ```{r skim}
 skimr::skim(Social_2022_raw_data)
@@ -410,6 +410,18 @@ Social_2022_summarized_data %>%
  kableExtra::kable_material(c("striped", "hover","condensed","responsive"),full_width = F,fixed_thead = T)
 ```
 
+------------------------------------------------------------------------  
+
+### Exercise 4 - Group this data set further  
+Get Valid/Viewable rate at the quarter, channel, platform level. Filter platform so twitter is excluded.  
+
+```{r}
+
+### Answer goes here , your table should have 4 columns minimum!
+
+```
+
+
 ------------------------------------------------------------------------
 
 ### Outputting Data as a Googlesheet
@@ -426,9 +438,11 @@ It will be similar to reading a sheet. Be careful as this will over-ride the exi
 
 ### Other tips
 
--   Dplyr Cheatsheet
+-   Dplyr Cheatsheet (help -> cheatsheets in menu), joins, distinct, counts, slicing, renaming, bind_rows as an alternative to rbind, 
 
--   Tabsets
+-   [Janitor Functions](https://cran.r-project.org/web/packages/janitor/vignettes/janitor.html) - more than just clean names()  
+
+-   Tabsets, Pseudo-HTML, better looking tables and other formatting options
 
 -   SQL in R - Sqldf package
 
@@ -441,3 +455,7 @@ It will be similar to reading a sheet. Be careful as this will over-ride the exi
 -   Using the Visual Markdown Editor and outline mode
 
 -   Tab Autocomplete
+
+-   Factors, ordering/leveling factors, usefulness in graphing - forcats package
+
+-   Melting and reshaping data - making data wider and longer - pivot_wider, pivot_longer, and melt from reshape2
