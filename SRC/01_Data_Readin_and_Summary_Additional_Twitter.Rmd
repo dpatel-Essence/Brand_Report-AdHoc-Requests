@@ -483,3 +483,57 @@ It will be similar to reading a sheet. Be careful as this will over-ride the exi
 -   Melting and reshaping data - making data wider and longer - pivot_wider, pivot_longer, and melt from reshape2
 
 -   Python in R
+
+------------------------------------------------------------------------
+
+### Additional Twitter Data
+
+```{r}
+
+Social_2022_twitter_data = googlesheets4::read_sheet(
+  "https://docs.google.com/spreadsheets/d/1OT7zoqbcnadQsR8ehHbvMfKn8mieWYa-dVaCOHFdhHI/edit#gid=1469978055", sheet = 'Additional Twitter Data') %>% 
+  mutate(
+    quarter_fixed = quarter(date_fixed),
+    valid_and_viewable_rate = valid_and_viewable_imp/impressions
+  ) %>% 
+  group_by(month = lubridate::floor_date(date_fixed, 'month')) %>%
+  relocate(month) %>% 
+  select(-date_fixed) %>% 
+  rename(date_fixed = month) %>% 
+  mutate(
+    date_fixed = ymd(date_fixed)
+  ) %>% 
+  ungroup() %>% 
+  group_by(date_fixed,quarter_fixed, across(dplyr::starts_with("moat"))) %>% 
+  summarize (
+    valid_and_viewable_imp = sum(valid_and_viewable_imp),
+    impressions = sum(impressions),
+    valid_and_viewable_rate = sum(valid_and_viewable_imp)/sum(impressions)
+  )
+```
+
+
+```{r}
+
+Social_2022_summarized_data_twitter <-
+  Social_2022_summarized_data %>%
+  filter(moat_tile_platform != 'Twitter') %>% 
+  bind_rows(Social_2022_twitter_data) %>%
+  group_by(date_fixed,quarter_fixed,across(dplyr::starts_with("moat"))) %>% 
+  summarize (
+    valid_and_viewable_imp = sum(valid_and_viewable_imp),
+    impressions = sum(impressions),
+    valid_and_viewable_rate = sum(valid_and_viewable_imp)/sum(impressions)
+  )
+```
+
+
+
+```{r}
+#WRITING SHEETS WILL BE COMMENTED OUT UNLESS REFRESH IS NECESSARY
+ write_sheet(Social_2022_summarized_data_twitter, ss = 'https://docs.google.com/spreadsheets/d/1OT7zoqbcnadQsR8ehHbvMfKn8mieWYa-dVaCOHFdhHI/edit#gid=1469978055',
+           sheet = 'Aggregated Data Twitter_v2')
+```
+
+
+
