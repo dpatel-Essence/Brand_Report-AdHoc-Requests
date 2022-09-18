@@ -1,0 +1,383 @@
+---
+title: "01_Data_Readin_Summary_2022NA_Social"
+author: "Darshan Patel"
+date: "`r Sys.Date()`"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+    number_sections: no
+    theme: cerulean
+    highlight: zenburn
+    fig_width: 7
+    fig_height: 6
+    fig_caption: yes
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+#note: normally include = FALSE for this
+knitr::opts_chunk$set(echo = TRUE) #all code chunks by default will be shown
+options(knitr.table.format = "html") #table format
+options(digits=5) #set digits in numbers
+options(scipen = 100) #digits show before using scientific notation
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+#install.packages("pacman")
+library(pacman) #for quick load/install of packages
+p_load(
+  dplyr, readr, tidyverse,forcats,purrr,lubridate, # reading in data
+  janitor, sqldf,googlesheets4, # additional tools for dealing with data
+  skimr,
+  rqdatatable, #
+  splitstackshape,stringr, #string related libraries
+  kableExtra, ggplot2, plotly,echarts4r,ggpubr,scales,RColorBrewer,ggthemes, #for visualization of data
+  reticulate #for using python
+)
+```
+
+
+## Data Read-in
+
+https://docs.google.com/spreadsheets/d/1nDXokcwtq_J8A6Uh7zAxsWW16MtcEC_1EiLstz4WGig/edit#gid=1782979571
+
+```{r}
+Social_2022_rawNA_data <- readr::read_csv("DATA/Social Query 2022 NA Campaigns.csv") %>%
+  clean_names() %>% 
+  filter(date < '2022-07-01') %>% 
+  filter(impressions_analyzed > 10)
+
+
+Social_2022_rawNA_lookup <- readr::read_csv("DATA/CampaignLookup.csv") %>%
+  clean_names()
+
+Social_2022_MOAT_lookup = googlesheets4::read_sheet(
+  "https://docs.google.com/spreadsheets/d/1nDXokcwtq_J8A6Uh7zAxsWW16MtcEC_1EiLstz4WGig/edit#gid=1782979571") %>% 
+  clean_names() %>% 
+  filter(social == 'Y')
+
+```
+
+## Summary Stats
+
+### Placement types distinct
+```{r}
+
+Social_2022_rawNA_data %>%
+  group_by(platform,olive_placement_type) %>% 
+  summarize (counts = n())
+
+Social_2022_rawNA_data %>%
+  group_by(platform,brand_id) %>% 
+  summarize (counts = n()) %>%
+  left_join(Social_2022_MOAT_lookup, by = 'brand_id')
+
+```
+
+```{r}
+
+Social_2022_processedNA_data <-
+  Social_2022_rawNA_data %>%
+  select(
+    olive_plan_id:opid, impressions_analyzed,
+    x2_sec_video_in_view_impressions, in_view_impressions, fully_on_screen_3sec_cumulative, player_vis_and_aud_on_complete_sum,
+    valid_and_avoc, valid_and_viewable, valid_and_viewable_gm, valid_and_fully_on_screen_3sec_cumulative, valid_and_inview_3sec_cumulative
+  ) %>%
+  rename(platform_old = platform
+         ) %>% 
+  left_join(Social_2022_MOAT_lookup, by = 'brand_id'
+  ) %>% 
+  mutate(
+    olive_plan_id = as.character(olive_plan_id),
+    olive_placement_id = as.character(olive_placement_id),
+    brand_id = as.character(brand_id) ,
+    opid = as.character(opid)
+  )
+
+#Look at global moat
+
+Social_2022_processedNA_data %>% 
+  skim()
+```
+
+### Plot Impression Level Data
+```{r, fig.height= 10, fig.width= 15}
+
+p = Social_2022_processedNA_data %>% 
+  ggplot() +
+    aes(x = date, y = impressions_analyzed, color = olive_plan_name, fill = olive_plan_name) +
+  xlab("Date") +
+  ylab("Impressions") +
+  ggtitle("Impressions by Campaign") + #fix size
+geom_bar(stat = 'identity') +
+  theme_bw() +
+  theme(
+     plot.title = element_text(size=22, hjust = 0.5),
+     axis.title.y = element_blank()
+  )
+
+p
+
+ggplotly(p)
+```
+
+### Calculate V/V and AVOC Rates by Platform
+```{r}
+Social_2022_SummarizedNA_date <-
+Social_2022_processedNA_data %>%
+  mutate(
+    valid_viewable_imps =
+      case_when(
+        platform == 'Twitter' & channel == 'Display' ~ valid_and_inview_3sec_cumulative,
+        platform == 'LinkedIn' ~ x2_sec_video_in_view_impressions,
+        TRUE ~ valid_and_viewable
+      ),
+    avoc_imps = case_when(
+    TRUE ~  player_vis_and_aud_on_complete_sum 
+    ),
+    quarter = lubridate::quarter(date),
+    channel = case_when(
+      channel == 'DISPLAY' ~ 'STATIC',
+      TRUE ~ channel
+    )
+  ) %>% 
+  group_by(olive_plan_name,date, channel, platform) %>% 
+  summarize(
+    valid_viewable_imps = sum(valid_viewable_imps),
+    avoc_imps = sum(avoc_imps),
+    impressions = sum(impressions_analyzed),
+    quarter = max(quarter)
+  ) %>% 
+  arrange(date,olive_plan_name)
+```
+
+```{r}
+
+Social_2022_SummarizedNA_date %>% 
+  filter(platform == 'Twitter') %>% 
+  filter(channel == 'DISPLAY')
+
+```
+
+
+
+```{r}
+
+Social_2022_SummarizedNA_date %>% 
+  group_by(quarter, platform, channel) %>% 
+  summarize(
+    `Valid and Viewable Rate` = sum(valid_viewable_imps)/sum(impressions),
+    `AVOC Rate` = sum(avoc_imps)/sum(impressions)
+  ) %>%     
+  kbl() %>% 
+ kable_material(c("striped", "hover","condensed","responsive"),full_width = F,fixed_thead = T)
+```
+
+```{r}
+write_sheet(Social_2022_SummarizedNA_date, ss = 'https://docs.google.com/spreadsheets/d/1OT7zoqbcnadQsR8ehHbvMfKn8mieWYa-dVaCOHFdhHI/edit#gid=1469978055',
+           sheet = 'Aggregated Data NA')
+```
+
+### Additional Twitter Level Information
+
+```{r}
+
+Social_2022_rawNA_DV30_data <- readr::read_csv("DATA/Social Query 2022 NA DV360.csv") %>%
+  clean_names() %>% 
+  filter(date < '2022-07-01') %>% 
+  mutate(
+    olive_placement_id = as.character(olive_placement_id)
+  )
+  
+
+Social_2022_processedTwitterNA_data <-
+Social_2022_processedNA_data %>% select(olive_plan_name,olive_placement_id,date,impressions_analyzed) %>%
+  mutate(
+    quarter = quarter(date)
+  ) %>% 
+  group_by(olive_plan_name,olive_placement_id,date,quarter) %>% 
+  summarize(
+    impressions_analyzed = sum(impressions_analyzed)
+  ) %>%
+  ungroup() %>% 
+  left_join(Social_2022_rawNA_DV30_data, by = c('olive_placement_id','olive_plan_name', 'date')) %>% 
+  filter(!is.na(olive_plan_name)) %>% 
+  filter(platform == 'Twitter - Official' & olive_placement_type == 'Standard Banner (BAN)') %>% 
+  mutate(
+    impressions = impressions_analyzed,
+    platform = 'Twitter',
+    channel = 'STATIC',
+    avoc_imps = NA,
+    valid_viewable_imps = valid_and_viewable_impressions,
+    Time = NA
+  ) %>% 
+  select(olive_plan_name,	date,	channel,	platform,	valid_viewable_imps,	avoc_imps,	impressions,	Time,	quarter)
+
+```
+
+```{r}
+
+Social_2022_SummarizedNA_data_updatedTwitter <-
+Social_2022_SummarizedNA_date %>%
+  filter(!(platform == 'Twitter' & channel == 'STATIC')) %>%   
+  bind_rows (Social_2022_processedTwitterNA_data)
+
+```
+
+### Update Twitter Information
+
+```{r}
+
+
+write_sheet(Social_2022_SummarizedNA_data_updatedTwitter, ss = 'https://docs.google.com/spreadsheets/d/1OT7zoqbcnadQsR8ehHbvMfKn8mieWYa-dVaCOHFdhHI/edit#gid=1469978055',
+           sheet = 'Additional NA Twitter Data')
+
+```
+  
+***   
+
+# H1 2022 Meta Ask (Top 7 Campaigns)  
+
+## Data Read-in
+
+[Google Sheet with BQ Results](https://docs.google.com/spreadsheets/d/1RU0QGpnn7FHtZaZfCA22kCcGpEeY1vLh0pHkJ9DEZfU/edit#gid=1752984558)  
+
+```{r}
+Social_2022_raw_Top7Meta_data = googlesheets4::read_sheet(
+  "https://docs.google.com/spreadsheets/d/1RU0QGpnn7FHtZaZfCA22kCcGpEeY1vLh0pHkJ9DEZfU/edit#gid=1752984558") %>% 
+  clean_names() %>% 
+  filter(impressions_analyzed > 10)
+
+
+Social_2022_MOAT_lookup = googlesheets4::read_sheet(
+  "https://docs.google.com/spreadsheets/d/1nDXokcwtq_J8A6Uh7zAxsWW16MtcEC_1EiLstz4WGig/edit#gid=1782979571") %>% 
+  clean_names() %>% 
+  filter(social == 'Y')
+```
+
+```{r}
+
+Social_2022_raw_Top7Meta_data %>% 
+  group_by(platform) %>% 
+  summarize(dist = n())
+```
+
+
+```{r}
+
+Social_2022_processed_Top7Meta_data <-
+  Social_2022_raw_Top7Meta_data %>%
+  filter(platform == 'Facebook') %>% 
+  select(
+    olive_plan_id:opid, impressions_analyzed,
+    x2_sec_video_in_view_impressions, in_view_impressions, fully_on_screen_3sec_cumulative, player_vis_and_aud_on_complete_sum,
+    valid_and_avoc, valid_and_viewable, valid_and_viewable_gm, valid_and_fully_on_screen_3sec_cumulative, valid_and_inview_3sec_cumulative
+  ) %>%
+  rename(platform_old = platform
+         ) %>% 
+  left_join(Social_2022_MOAT_lookup, by = 'brand_id'
+  ) %>% 
+  mutate(
+    olive_plan_id = as.character(olive_plan_id),
+    olive_placement_id = as.character(olive_placement_id),
+    brand_id = as.character(brand_id) ,
+    opid = as.character(opid)
+  )
+
+#Check Missing Data
+
+Social_2022_processed_Top7Meta_data %>% 
+  skim()
+
+```
+
+
+### Plot Impression Level Data
+```{r, fig.height= 10, fig.width= 20}
+
+p = Social_2022_processed_Top7Meta_data %>% 
+  ggplot() +
+    aes(x = date, y = impressions_analyzed, color = olive_plan_name, fill = olive_plan_name) +
+  xlab("Date") +
+  ylab("Impressions") +
+  ggtitle("Meta Impressions by Campaign") + #fix size
+geom_bar(stat = 'identity') +
+  theme_bw() +
+  theme(
+     plot.title = element_text(size=22, hjust = 0.5),
+     axis.title.y = element_blank()
+  )
+
+p
+
+ggplotly(p)
+```
+
+### Calculate V/V and AVOC Rates by Platform
+```{r}
+Social_2022_Summarized_Top7Meta_data <-
+Social_2022_processed_Top7Meta_data %>%
+  mutate(
+    valid_viewable_imps =
+      case_when(
+        platform == 'Twitter' & channel == 'Display' ~ valid_and_inview_3sec_cumulative,
+        platform == 'LinkedIn' ~ x2_sec_video_in_view_impressions,
+        TRUE ~ valid_and_viewable
+      ),
+    avoc_imps = case_when(
+    is.na(player_vis_and_aud_on_complete_sum) ~ 0,
+    TRUE ~  player_vis_and_aud_on_complete_sum 
+    ),
+    quarter = lubridate::quarter(date),
+    channel = case_when(
+      channel == 'DISPLAY' ~ 'STATIC',
+      TRUE ~ channel
+    )
+  ) %>% 
+  group_by(olive_plan_name,date, channel, platform) %>% 
+  summarize(
+    valid_viewable_imps = sum(valid_viewable_imps),
+    avoc_imps = sum(avoc_imps),
+    impressions = sum(impressions_analyzed),
+    quarter = max(quarter)
+  ) %>% 
+  arrange(date,olive_plan_name)
+```
+
+
+### Summarized Table - Campaign
+[Sumif Documentation](https://stackoverflow.com/questions/23528862/summarize-all-group-values-and-a-conditional-subset-in-the-same-call)
+
+```{r}
+
+Social_2022_Summarized_Top7Meta_data %>% 
+  group_by(olive_plan_name) %>% 
+  summarize(
+    `Valid and Viewable Rate` = sum(valid_viewable_imps)/sum(impressions),
+    `Video vs Static` = 1 - sum(impressions[channel =='STATIC'])/sum(impressions)
+  ) %>%     
+  kbl() %>% 
+ kable_material(c("striped", "hover","condensed","responsive"),full_width = F,fixed_thead = T)
+```
+
+### Write to Google Sheets
+
+```{r}
+
+Social_2022_Summarized_Top7Meta_data_Table <-
+Social_2022_Summarized_Top7Meta_data %>% 
+  group_by(olive_plan_name) %>% 
+  summarize(
+    `Valid and Viewable Rate` = sum(valid_viewable_imps)/sum(impressions),
+    `Video vs Static` = 1 - sum(impressions[channel =='STATIC'])/sum(impressions)
+  )
+
+```
+
+
+
+```{r}
+write_sheet(Social_2022_Summarized_Top7Meta_data_Table, ss = 'https://docs.google.com/spreadsheets/d/1RU0QGpnn7FHtZaZfCA22kCcGpEeY1vLh0pHkJ9DEZfU/edit#gid=1752984558',
+           sheet = 'Aggregated Data From R')
+```
+
+
