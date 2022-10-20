@@ -35,10 +35,9 @@ p_load(
 )
 ```
 
-
 ## Data Read-in
 
-https://docs.google.com/spreadsheets/d/1nDXokcwtq_J8A6Uh7zAxsWW16MtcEC_1EiLstz4WGig/edit#gid=1782979571
+<https://docs.google.com/spreadsheets/d/1nDXokcwtq_J8A6Uh7zAxsWW16MtcEC_1EiLstz4WGig/edit#gid=1782979571>
 
 ```{r}
 Social_2022_rawNA_data <- readr::read_csv("DATA/Social Query 2022 NA Campaigns.csv") %>%
@@ -60,6 +59,7 @@ Social_2022_MOAT_lookup = googlesheets4::read_sheet(
 ## Summary Stats
 
 ### Placement types distinct
+
 ```{r}
 
 Social_2022_rawNA_data %>%
@@ -100,6 +100,7 @@ Social_2022_processedNA_data %>%
 ```
 
 ### Plot Impression Level Data
+
 ```{r, fig.height= 10, fig.width= 15}
 
 p = Social_2022_processedNA_data %>% 
@@ -121,6 +122,7 @@ ggplotly(p)
 ```
 
 ### Calculate V/V and AVOC Rates by Platform
+
 ```{r}
 Social_2022_SummarizedNA_date <-
 Social_2022_processedNA_data %>%
@@ -157,8 +159,6 @@ Social_2022_SummarizedNA_date %>%
   filter(channel == 'DISPLAY')
 
 ```
-
-
 
 ```{r}
 
@@ -232,14 +232,14 @@ write_sheet(Social_2022_SummarizedNA_data_updatedTwitter, ss = 'https://docs.goo
            sheet = 'Additional NA Twitter Data')
 
 ```
-  
-***   
 
-# H1 2022 Meta Ask (Top 7 Campaigns)  
+------------------------------------------------------------------------
+
+# H1 2022 Meta Ask (Top 7 Campaigns)
 
 ## Data Read-in
 
-[Google Sheet with BQ Results](https://docs.google.com/spreadsheets/d/1RU0QGpnn7FHtZaZfCA22kCcGpEeY1vLh0pHkJ9DEZfU/edit#gid=1752984558)  
+[Google Sheet with BQ Results](https://docs.google.com/spreadsheets/d/1RU0QGpnn7FHtZaZfCA22kCcGpEeY1vLh0pHkJ9DEZfU/edit#gid=1752984558)
 
 ```{r}
 Social_2022_raw_Top7Meta_data = googlesheets4::read_sheet(
@@ -260,7 +260,6 @@ Social_2022_raw_Top7Meta_data %>%
   group_by(platform) %>% 
   summarize(dist = n())
 ```
-
 
 ```{r}
 
@@ -290,8 +289,8 @@ Social_2022_processed_Top7Meta_data %>%
 
 ```
 
-
 ### Plot Impression Level Data
+
 ```{r, fig.height= 10, fig.width= 20}
 
 p = Social_2022_processed_Top7Meta_data %>% 
@@ -313,6 +312,7 @@ ggplotly(p)
 ```
 
 ### Calculate V/V and AVOC Rates by Platform
+
 ```{r}
 Social_2022_Summarized_Top7Meta_data <-
 Social_2022_processed_Top7Meta_data %>%
@@ -343,8 +343,8 @@ Social_2022_processed_Top7Meta_data %>%
   arrange(date,olive_plan_name)
 ```
 
-
 ### Summarized Table - Campaign
+
 [Sumif Documentation](https://stackoverflow.com/questions/23528862/summarize-all-group-values-and-a-conditional-subset-in-the-same-call)
 
 ```{r}
@@ -373,11 +373,156 @@ Social_2022_Summarized_Top7Meta_data %>%
 
 ```
 
-
-
 ```{r}
 write_sheet(Social_2022_Summarized_Top7Meta_data_Table, ss = 'https://docs.google.com/spreadsheets/d/1RU0QGpnn7FHtZaZfCA22kCcGpEeY1vLh0pHkJ9DEZfU/edit#gid=1752984558',
            sheet = 'Aggregated Data From R')
+```
+
+
+
+------------------------------------------------------------------------
+
+# H1 2022 Meta Ask (Additional 2 Campaigns)
+
+## Data Read-in
+
+[Google Sheet with BQ Results](https://docs.google.com/spreadsheets/d/19MvBKXcBtv9Whn4uxarKGvuLDoEgsfrLrITPbt2jfro/edit#gid=372594310)
+
+```{r}
+Social_2022_raw_Add2Meta_data = googlesheets4::read_sheet(
+  "https://docs.google.com/spreadsheets/d/1YdkESoYlv6fzpQY84j4AB7Lw5qfW8XKPmh2B0gApYJA/edit#gid=1980208140") %>% 
+  clean_names() %>% 
+  filter(impressions_analyzed > 10)
+
+
+Social_2022_MOAT_lookup = googlesheets4::read_sheet(
+  "https://docs.google.com/spreadsheets/d/1nDXokcwtq_J8A6Uh7zAxsWW16MtcEC_1EiLstz4WGig/edit#gid=1782979571") %>% 
+  clean_names() %>% 
+  filter(social == 'Y')
+```
+
+```{r}
+
+Social_2022_raw_Add2Meta_data %>% 
+  group_by(platform) %>% 
+  summarize(dist = n())
+```
+
+```{r}
+
+Social_2022_processed_Add2Meta_data <-
+  Social_2022_raw_Add2Meta_data %>%
+  filter(platform == 'Facebook'|platform == 'Facebook/Instagram') %>% 
+  select(
+    olive_plan_id:opid, impressions_analyzed,
+    x2_sec_video_in_view_impressions, in_view_impressions, fully_on_screen_3sec_cumulative, player_vis_and_aud_on_complete_sum,
+    valid_and_avoc, valid_and_viewable, valid_and_viewable_gm, valid_and_fully_on_screen_3sec_cumulative, valid_and_inview_3sec_cumulative
+  ) %>%
+  rename(platform_old = platform
+         ) %>% 
+  left_join(Social_2022_MOAT_lookup, by = 'brand_id'
+  ) %>% 
+  mutate(
+    olive_plan_id = as.character(olive_plan_id),
+    olive_placement_id = as.character(olive_placement_id),
+    brand_id = as.character(brand_id) ,
+    opid = as.character(opid)
+  )
+
+#Check Missing Data
+
+Social_2022_processed_Add2Meta_data %>% 
+  skim()
+
+```
+
+### Plot Impression Level Data
+
+```{r, fig.height= 10, fig.width= 20}
+
+p = Social_2022_processed_Add2Meta_data %>% 
+  ggplot() +
+    aes(x = date, y = impressions_analyzed, color = olive_plan_name, fill = olive_plan_name) +
+  xlab("Date") +
+  ylab("Impressions") +
+  ggtitle("Meta Impressions by Campaign") + #fix size
+geom_bar(stat = 'identity') +
+  theme_bw() +
+  theme(
+     plot.title = element_text(size=22, hjust = 0.5),
+     axis.title.y = element_blank()
+  )
+
+p
+
+ggplotly(p)
+```
+
+### Calculate V/V and AVOC Rates by Platform
+
+```{r}
+Social_2022_Summarized_Add2Meta_data <-
+Social_2022_processed_Add2Meta_data %>%
+  mutate(
+    valid_viewable_imps =
+      case_when(
+        platform == 'Twitter' & channel == 'Display' ~ valid_and_inview_3sec_cumulative,
+        platform == 'LinkedIn' ~ x2_sec_video_in_view_impressions,
+        TRUE ~ valid_and_viewable
+      ),
+    avoc_imps = case_when(
+    is.na(player_vis_and_aud_on_complete_sum) ~ 0,
+    TRUE ~  player_vis_and_aud_on_complete_sum 
+    ),
+    quarter = lubridate::quarter(date),
+    channel = case_when(
+      channel == 'DISPLAY' ~ 'STATIC',
+      TRUE ~ channel
+    )
+  ) %>% 
+  group_by(olive_plan_name,date, channel, platform) %>% 
+  summarize(
+    valid_viewable_imps = sum(valid_viewable_imps),
+    avoc_imps = sum(avoc_imps),
+    impressions = sum(impressions_analyzed),
+    quarter = max(quarter)
+  ) %>% 
+  arrange(date,olive_plan_name)
+```
+
+### Summarized Table - Campaign
+
+[Sumif Documentation](https://stackoverflow.com/questions/23528862/summarize-all-group-values-and-a-conditional-subset-in-the-same-call)
+
+```{r}
+
+Social_2022_Summarized_Add2Meta_data %>% 
+  group_by(olive_plan_name) %>% 
+  summarize(
+    `Valid and Viewable Rate` = sum(valid_viewable_imps)/sum(impressions),
+    `Video vs Static` = 1 - sum(impressions[channel =='STATIC'])/sum(impressions)
+  ) %>%     
+  kbl() %>% 
+ kable_material(c("striped", "hover","condensed","responsive"),full_width = F,fixed_thead = T)
+```
+
+### Write to Google Sheets
+
+```{r}
+
+Social_2022_Summarized_Add2Meta_data_Table <-
+Social_2022_Summarized_Add2Meta_data %>% 
+  group_by(olive_plan_name) %>% 
+  summarize(
+    `Valid and Viewable Rate` = sum(valid_viewable_imps)/sum(impressions),
+    `Video vs Static` = 1 - sum(impressions[channel =='STATIC'])/sum(impressions)
+  )
+
+```
+
+```{r}
+write_sheet(Social_2022_Summarized_Add2Meta_data_Table, ss = 'https://docs.google.com/spreadsheets/d/1RU0QGpnn7FHtZaZfCA22kCcGpEeY1vLh0pHkJ9DEZfU/edit#gid=1752984558',
+           sheet = 'Additional 2 Campaign Data From R')
 ```
 
 
